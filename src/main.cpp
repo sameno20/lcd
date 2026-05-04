@@ -1,33 +1,34 @@
 /*
-Sam Boyen s16729
+Sam Boyen s16729 sameno20
+Darrell Morel s174512 Darrell-M 
+Asman Ali 
 1IOT_D1
 */
 
 #include <Arduino.h>
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_I2C.h> 
 
-int Vooruit_knop = 23;
-int Achteruit_knop = 34; 
-int Links_knop = 35;
-int Rechts_knop = 32;
+int X_PIN = 34;
+int Y_PIN = 35;
+int SW_PIN = 32;
+
+int X = 0;
+int Y = 0;
+int M1_S = 0;
+int M2_S = 0;
+int R = 0; 
+
 int M1_IA = 18;
 int M1_IB = 5;
 int M2_IA = 2; 
 int M2_IB = 15;
 LiquidCrystal_I2C lcd(0x27,16,2);
 
-int Speed_pot = 39;
-
-int Speed_read = 0;
 
 void setup(){
   Serial.begin(9600);
   Serial.println("Hello, ESP32!");
-	pinMode(Vooruit_knop,INPUT_PULLDOWN);
-	pinMode(Achteruit_knop,INPUT_PULLDOWN);
-  pinMode(Links_knop,INPUT_PULLDOWN);
-  pinMode(Rechts_knop,INPUT_PULLDOWN);
 
 	pinMode(M1_IA,OUTPUT);
 	pinMode(M1_IB,OUTPUT);
@@ -39,55 +40,61 @@ void setup(){
 }
 
 void loop(){
-  while(digitalRead(Vooruit_knop)){
-    Serial.println("Vooruit");
-    lcd.setCursor(0,0);
-    lcd.print("vooruit");
-    Speed_read = map(analogRead(Speed_pot), 0, 4095, 0, 255);
-    analogWrite(M1_IA, Speed_read);
-    analogWrite(M1_IB, 0);
-    analogWrite(M2_IA, Speed_read);
-    analogWrite(M2_IB, 0);
-    delay(100);
+  X = map(analogRead(X_PIN), 0, 4095, -255, 255);
+  Y = map(analogRead(Y_PIN), 0, 4095, -255, 255);
+  
+  if(X >= 10){
+    M1_S = X;
+    M2_S = X;
+    R = 0;
   }
-  while(digitalRead(Achteruit_knop)){
-    Serial.println("Achteruit");
-    lcd.setCursor(0,0);
-    lcd.print("achteruit");
-    Speed_read = map(analogRead(Speed_pot), 0, 4095, 0, 255);
-    analogWrite(M1_IB, Speed_read);
-    analogWrite(M1_IA, 0);
-    analogWrite(M2_IB, Speed_read);
-    analogWrite(M2_IA, 0);
-    delay(100);
+  else if(X <= -10){
+    M1_S = abs(X);
+    M2_S = abs(X);
+    R = 1;
   }
-  while(digitalRead(Links_knop)){
-    Serial.println("Links");
-    lcd.setCursor(0,0);
-    lcd.print("links");
-    Speed_read = map(analogRead(Speed_pot), 0, 4095, 0, 255);
-    analogWrite(M1_IA, Speed_read);
-    analogWrite(M1_IB, 0);
-    analogWrite(M2_IB, Speed_read);
-    analogWrite(M2_IA, 0);
-    delay(100);
+  else{
+    M1_S = 0;
+    M2_S = 0;
   }
-  while(digitalRead(Rechts_knop)){
-    Serial.println("Rechts");
-    lcd.setCursor(0,0);
-    lcd.print("rechts");
-    Speed_read = map(analogRead(Speed_pot), 0, 4095, 0, 255);
-    analogWrite(M1_IB, Speed_read);
-    analogWrite(M1_IA, 0);
-    analogWrite(M2_IA, Speed_read);
-    analogWrite(M2_IB, 0);
-    delay(100);
+
+  if(Y >= 10 or Y <= -10){
+    M1_S = M1_S + Y;
+    M2_S = M2_S - Y;
+
+    if(M1_S > 255){
+      M1_S = 255;
+    }
+    if(M1_S < 0){
+      M1_S = 0;
+    }
+    if(M2_S > 255){
+      M2_S = 255;
+    }
+    if(M2_S < 0){
+      M2_S = 0;
+    }
   }
-  analogWrite(M1_IA, 0);
-  analogWrite(M1_IB, 0);
-  analogWrite(M2_IA, 0);
-  analogWrite(M2_IB, 0);
+  
+  Serial.println(M1_S);
+  Serial.println(M2_S);
   lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print(M1_S);
+  lcd.setCursor(0,1);
+  lcd.print(M2_S);
+
+  if(R == 0){
+    analogWrite(M1_IA, M1_S);
+    analogWrite(M1_IB, 0);
+    analogWrite(M2_IA, M2_S);
+    analogWrite(M2_IB, 0);
+  }
+  else if(R == 1){
+    analogWrite(M1_IB, M1_S);
+    analogWrite(M1_IA, 0);
+    analogWrite(M2_IB, M2_S);
+    analogWrite(M2_IA, 0);
+  }
   delay(100);
 }
-  
